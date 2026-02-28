@@ -73,12 +73,18 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
         allStreams.push({ id: 'local-screen', stream: screenStream, nickname: `${nickname || 'Sen'} (Ekran)`, type: 'screen', isLocal: true });
     }
 
+    // Helper: check if a MediaStream has at least one live, unmuted video track
+    const hasActiveVideo = (stream?: MediaStream) => {
+        if (!stream) return false;
+        return stream.getVideoTracks().some(t => t.readyState === 'live' && !t.muted);
+    };
+
     Object.entries(peers).forEach(([peerId, peer]) => {
-        if (peer.stream && peer.stream.getTracks().length > 0) {
-            allStreams.push({ id: `${peerId}-cam`, stream: peer.stream, nickname: peer.nickname ? `${peer.nickname} (Kamera)` : 'Guest', type: 'cam', isLocal: false });
+        if (hasActiveVideo(peer.stream)) {
+            allStreams.push({ id: `${peerId}-cam`, stream: peer.stream!, nickname: peer.nickname ? `${peer.nickname} (Kamera)` : 'Guest', type: 'cam', isLocal: false });
         }
-        if (peer.screenStream && peer.screenStream.getTracks().length > 0) {
-            allStreams.push({ id: `${peerId}-screen`, stream: peer.screenStream, nickname: peer.nickname ? `${peer.nickname} (Ekran)` : 'Ekran', type: 'screen', isLocal: false });
+        if (hasActiveVideo(peer.screenStream)) {
+            allStreams.push({ id: `${peerId}-screen`, stream: peer.screenStream!, nickname: peer.nickname ? `${peer.nickname} (Ekran)` : 'Ekran', type: 'screen', isLocal: false });
         }
     });
 

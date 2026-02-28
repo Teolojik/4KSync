@@ -100,7 +100,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
     const isOwnerAdmin = adminId === realUserId;
 
     return (
-        <div className={containerClasses} onClick={() => onFocus && onFocus(item.id)}>
+        <div className={`${containerClasses} ${!isCam ? 'hidden sm:block' : ''}`} onClick={() => onFocus && onFocus(item.id)}>
             {item.stream ? (
                 <video
                     ref={ref}
@@ -118,10 +118,11 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                 </div>
             )}
 
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer z-10">
+            {/* Desktop hover overlay with admin controls */}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center gap-2 cursor-pointer z-10">
                 {onFocus && (
                     <button
-                        onClick={() => onFocus(item.id)}
+                        onClick={(e) => { e.stopPropagation(); onFocus(item.id); }}
                         className="bg-black/60 hover:bg-black p-3 rounded-full text-white backdrop-blur-md transition-all shadow-xl hover:scale-110 mb-2"
                         title="Ana Ekrana Büyüt"
                     >
@@ -133,14 +134,14 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                     <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
                             <button
-                                onClick={() => onRemoteMute && onRemoteMute(realUserId)}
+                                onClick={(e) => { e.stopPropagation(); onRemoteMute && onRemoteMute(realUserId); }}
                                 className="bg-amber-500/80 hover:bg-amber-500 p-2 rounded-full text-white backdrop-blur-md transition-all shadow-xl hover:scale-110"
                                 title="Kullanıcıyı Sustur (Mute)"
                             >
                                 <MicOff size={14} />
                             </button>
                             <button
-                                onClick={() => onRemoteVideoOff && onRemoteVideoOff(realUserId)}
+                                onClick={(e) => { e.stopPropagation(); onRemoteVideoOff && onRemoteVideoOff(realUserId); }}
                                 className="bg-zinc-100/10 hover:bg-zinc-100/20 p-2 rounded-full text-white backdrop-blur-md transition-all shadow-xl hover:scale-110"
                                 title="Kamerayı Kapat"
                             >
@@ -149,14 +150,14 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                         </div>
                         <div className="flex gap-2 justify-center">
                             <button
-                                onClick={() => onKick && onKick(realUserId)}
+                                onClick={(e) => { e.stopPropagation(); onKick && onKick(realUserId); }}
                                 className="bg-red-500/80 hover:bg-red-500 p-2 rounded-full text-white backdrop-blur-md transition-all shadow-xl hover:scale-110"
                                 title="Kullanıcıyı At (Kick)"
                             >
                                 <UserMinus size={14} />
                             </button>
                             <button
-                                onClick={() => onBan && onBan(realUserId)}
+                                onClick={(e) => { e.stopPropagation(); onBan && onBan(realUserId); }}
                                 className="bg-zinc-800/80 hover:bg-zinc-700 p-2 rounded-full text-white backdrop-blur-md transition-all shadow-xl hover:scale-110"
                                 title="Kullanıcıyı Engelle (Ban)"
                             >
@@ -166,6 +167,13 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                     </div>
                 )}
             </div>
+
+            {/* Mobile: subtle tap-to-enlarge hint */}
+            {onFocus && (
+                <div className="absolute top-2 right-2 sm:hidden bg-black/50 p-1.5 rounded-lg backdrop-blur-sm z-10">
+                    <Maximize2 size={14} className="text-white/70" />
+                </div>
+            )}
 
             <div className={`absolute ${isCam ? 'bottom-2 sm:bottom-4' : 'bottom-2 left-2 sm:bottom-4 sm:left-4'} bg-[#0a0a0a]/60 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[11px] font-semibold tracking-wide backdrop-blur-xl shadow-lg flex items-center gap-1.5 sm:gap-2 z-10 border border-white/10`}>
                 <div className={`w-2 h-2 rounded-full ${item.isLocal ? 'bg-[#A855F7] shadow-[0_0_10px_rgba(168,85,247,0.8)]' : 'bg-blue-500'}`}></div>
