@@ -342,39 +342,46 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
         try {
             const pc = new RTCPeerConnection(ICE_SERVERS);
 
-            const micTrack = localStreamRef.current?.getAudioTracks()[0];
-            const camTrack = localStreamRef.current?.getVideoTracks()[0];
-            const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0];
-            const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0];
+            let micTc: RTCRtpTransceiver | null = null;
+            let camTc: RTCRtpTransceiver | null = null;
+            let screenVideoTc: RTCRtpTransceiver | null = null;
+            let screenAudioTc: RTCRtpTransceiver | null = null;
 
-            // Simple transceivers - no simulcast to avoid crashes with placeholder tracks
-            const micTc = pc.addTransceiver(micTrack || 'audio', { direction: 'sendrecv' });
-            const camTc = pc.addTransceiver(camTrack || 'video', { direction: 'sendrecv' });
-            const screenVideoTc = pc.addTransceiver(screenVideoTrack || 'video', { direction: 'sendrecv' });
-            const screenAudioTc = pc.addTransceiver(screenAudioTrack || 'audio', { direction: 'sendrecv' });
+            // Only initiator creates transceivers - answerer gets them from the offer
+            if (isInitiator) {
+                const micTrack = localStreamRef.current?.getAudioTracks()[0];
+                const camTrack = localStreamRef.current?.getVideoTracks()[0];
+                const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0];
+                const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0];
 
-            console.log(`[4KSync] Transceivers created for ${peerId}`);
+                micTc = pc.addTransceiver(micTrack || 'audio', { direction: 'sendrecv' });
+                camTc = pc.addTransceiver(camTrack || 'video', { direction: 'sendrecv' });
+                screenVideoTc = pc.addTransceiver(screenVideoTrack || 'video', { direction: 'sendrecv' });
+                screenAudioTc = pc.addTransceiver(screenAudioTrack || 'audio', { direction: 'sendrecv' });
 
-            // VP9 Codec Preference (best quality/bitrate ratio)
-            const applyVP9Preference = (tc: RTCRtpTransceiver) => {
-                try {
-                    if (typeof RTCRtpReceiver !== 'undefined' && RTCRtpReceiver.getCapabilities && 'setCodecPreferences' in tc) {
-                        const caps = RTCRtpReceiver.getCapabilities('video');
-                        if (caps && caps.codecs) {
-                            const vp9 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/vp9');
-                            if (vp9.length > 0) {
-                                const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/vp9');
-                                tc.setCodecPreferences([...vp9, ...others]);
+                // VP9 Codec Preference
+                const applyVP9Preference = (tc: RTCRtpTransceiver) => {
+                    try {
+                        if (typeof RTCRtpReceiver !== 'undefined' && RTCRtpReceiver.getCapabilities && 'setCodecPreferences' in tc) {
+                            const caps = RTCRtpReceiver.getCapabilities('video');
+                            if (caps && caps.codecs) {
+                                const vp9 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/vp9');
+                                if (vp9.length > 0) {
+                                    const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/vp9');
+                                    tc.setCodecPreferences([...vp9, ...others]);
+                                }
                             }
                         }
+                    } catch (e) {
+                        console.warn('[4KSync] VP9 preference failed (OK):', e);
                     }
-                } catch (e) {
-                    console.warn('[4KSync] VP9 preference failed (OK):', e);
-                }
-            };
+                };
 
-            applyVP9Preference(camTc);
-            applyVP9Preference(screenVideoTc);
+                applyVP9Preference(camTc);
+                applyVP9Preference(screenVideoTc);
+            }
+
+            console.log(`[4KSync] Transceivers created for ${peerId}`);
 
             const remoteCamStream = new MediaStream();
             const remoteScreenStream = new MediaStream();
@@ -383,7 +390,7 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 connection: pc,
                 stream: remoteCamStream,
                 screenStream: remoteScreenStream,
-                transceivers: { mic: micTc, cam: camTc, screenVideo: screenVideoTc, screenAudio: screenAudioTc }
+                transceivers: { mic: micTc, cam: camTc, screenVideo: screenVideoTc, screenAudio: screenAudioTc } as any
             });
 
             pc.onicecandidate = (event) => {
@@ -393,22 +400,19 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
             };
 
             pc.ontrack = (event) => {
-                console.log(`[4KSync] Track received from ${peerId}: kind=${event.track.kind}`);
-                if (event.transceiver === micTc || event.transceiver === camTc) {
+                console.log(`[4KSync] Track received from ${peerId}: kind=${event.track.kind}, mid=${event.transceiver.mid}`);
+                const mid = parseInt(event.transceiver.mid || '0');
+                // First 2 transceivers (mid 0,1) = camera stream, rest = screen stream
+                if (mid <= 1) {
                     remoteCamStream.addTrack(event.track);
-                } else if (event.transceiver === screenVideoTc || event.transceiver === screenAudioTc) {
-                    remoteScreenStream.addTrack(event.track);
                 } else {
-                    // Fallback: assign by track kind and order
-                    if (event.track.kind === 'video' && remoteCamStream.getVideoTracks().length === 0) {
-                        remoteCamStream.addTrack(event.track);
-                    } else if (event.track.kind === 'audio' && remoteCamStream.getAudioTracks().length === 0) {
-                        remoteCamStream.addTrack(event.track);
-                    } else {
-                        remoteScreenStream.addTrack(event.track);
-                    }
+                    remoteScreenStream.addTrack(event.track);
                 }
-                updatePeers(peerId, {});
+                // Debounced re-render to avoid infinite loop
+                clearTimeout((pc as any)._trackUpdateTimer);
+                (pc as any)._trackUpdateTimer = setTimeout(() => {
+                    updatePeers(peerId, {});
+                }, 100);
             };
 
             pc.oniceconnectionstatechange = () => {
