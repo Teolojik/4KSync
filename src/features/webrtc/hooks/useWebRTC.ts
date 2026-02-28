@@ -335,7 +335,7 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
     };
 
     const createPeerConnection = (peerId: string, isInitiator: boolean) => {
-        if (peersRef.current[peerId]) return peersRef.current[peerId].connection;
+        if (peersRef.current[peerId]?.connection) return peersRef.current[peerId].connection;
 
         console.log(`[4KSync] Creating peer connection for ${peerId}, initiator=${isInitiator}`);
 
