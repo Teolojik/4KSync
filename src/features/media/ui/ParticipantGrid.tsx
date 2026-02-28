@@ -65,10 +65,31 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
 }) {
     const ref = useRef<HTMLVideoElement>(null);
 
+    const hasActiveTracks = item.stream && item.stream.getTracks().length > 0;
+
     useEffect(() => {
-        if (ref.current && item.stream) {
-            ref.current.srcObject = item.stream;
+        if (ref.current && item.stream && item.stream.getTracks().length > 0) {
+            if (ref.current.srcObject !== item.stream) {
+                ref.current.srcObject = item.stream;
+            }
         }
+    }, [item.stream, hasActiveTracks]);
+
+    // Listen for tracks being added to the stream after initial render
+    useEffect(() => {
+        if (!item.stream) return;
+        const onTrackAdded = () => {
+            if (ref.current && item.stream) {
+                if (ref.current.srcObject !== item.stream) {
+                    ref.current.srcObject = item.stream;
+                }
+                ref.current.play().catch(() => { });
+            }
+        };
+        item.stream.addEventListener('addtrack', onTrackAdded);
+        return () => {
+            item.stream?.removeEventListener('addtrack', onTrackAdded);
+        };
     }, [item.stream]);
 
     const isCam = item.type === 'cam';
@@ -88,7 +109,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                     muted={item.isLocal}
                     className="w-full h-full object-cover"
                     onLoadedMetadata={(e) => {
-                        (e.target as HTMLVideoElement).play().catch(console.error);
+                        (e.target as HTMLVideoElement).play().catch(() => { });
                     }}
                 />
             ) : (
