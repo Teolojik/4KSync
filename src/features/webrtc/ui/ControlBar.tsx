@@ -94,7 +94,7 @@ export function ControlBar({ roomId, onStartWebcam, onStartScreenShare, isReconn
                             </button>
 
                             {showCamMenu && (
-                                <div className="absolute right-0 bottom-full mb-4 w-48 bg-[#18181b] border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-50">
+                                <div className="absolute left-0 sm:right-0 sm:left-auto bottom-full mb-4 w-48 bg-[#18181b] border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-50">
                                     <div className="px-3 py-2 text-[10px] font-semibold text-white/40 uppercase tracking-wider border-b border-white/5 bg-black/20">
                                         Kamera Kalitesi
                                     </div>
@@ -197,7 +197,7 @@ export function ControlBar({ roomId, onStartWebcam, onStartScreenShare, isReconn
                     )}
 
                     {showResMenu && !hasScreenStream && (
-                        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-4 w-48 bg-[#18181b] border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-50">
+                        <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 bottom-full mb-4 w-48 bg-[#18181b] border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-50">
                             <div className="px-3 py-2 text-[10px] font-semibold text-white/40 uppercase tracking-wider border-b border-white/5 bg-black/20">
                                 Kalite Ayarı
                             </div>

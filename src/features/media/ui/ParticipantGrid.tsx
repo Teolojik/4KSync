@@ -79,7 +79,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
     const isOwnerAdmin = adminId === realUserId;
 
     return (
-        <div className={containerClasses}>
+        <div className={containerClasses} onClick={() => onFocus && onFocus(item.id)}>
             {item.stream ? (
                 <video
                     ref={ref}
@@ -97,7 +97,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                 </div>
             )}
 
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer">
                 {onFocus && (
                     <button
                         onClick={() => onFocus(item.id)}
