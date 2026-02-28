@@ -613,6 +613,46 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                         answer.sdp = mungeSDP(answer.sdp || '');
                         await pc.setLocalDescription(answer);
                         broadcastSignal(senderId, 'answer', pc.localDescription);
+
+                        // Answerer: attach local tracks to the offer-created transceivers
+                        const transceivers = pc.getTransceivers();
+                        console.log(`[4KSync] Answerer: ${transceivers.length} transceivers after answer`);
+
+                        const micTrack = localStreamRef.current?.getAudioTracks()[0];
+                        const camTrack = localStreamRef.current?.getVideoTracks()[0];
+                        const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0];
+                        const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0];
+
+                        // Replace sender tracks on the offer-created transceivers
+                        for (const tc of transceivers) {
+                            try {
+                                if (tc.mid === '0' && micTrack) {
+                                    await tc.sender.replaceTrack(micTrack);
+                                    console.log('[4KSync] Answerer: attached mic track');
+                                } else if (tc.mid === '1' && camTrack) {
+                                    await tc.sender.replaceTrack(camTrack);
+                                    console.log('[4KSync] Answerer: attached cam track');
+                                } else if (tc.mid === '2' && screenVideoTrack) {
+                                    await tc.sender.replaceTrack(screenVideoTrack);
+                                } else if (tc.mid === '3' && screenAudioTrack) {
+                                    await tc.sender.replaceTrack(screenAudioTrack);
+                                }
+                            } catch (e) {
+                                console.warn(`[4KSync] Answerer: replaceTrack failed for mid=${tc.mid}:`, e);
+                            }
+                        }
+
+                        // Store transceivers for future track updates
+                        if (transceivers.length >= 4) {
+                            updatePeers(senderId, {
+                                transceivers: {
+                                    mic: transceivers[0],
+                                    cam: transceivers[1],
+                                    screenVideo: transceivers[2],
+                                    screenAudio: transceivers[3]
+                                }
+                            });
+                        }
                     } else if (type === 'answer') {
                         if (pc.signalingState === 'have-local-offer') {
                             await pc.setRemoteDescription(new RTCSessionDescription(data));
