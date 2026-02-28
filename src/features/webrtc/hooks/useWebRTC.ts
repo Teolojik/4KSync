@@ -253,8 +253,13 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
     };
 
     const removePeer = (peerId: string) => {
-        if (peersRef.current[peerId]) {
-            peersRef.current[peerId].connection.close();
+        const peer = peersRef.current[peerId];
+        if (peer && peer.connection) {
+            try {
+                peer.connection.close();
+            } catch (e) {
+                console.error('Peer connection close error:', e);
+            }
             const updatedPeers = { ...peersRef.current };
             delete updatedPeers[peerId];
             peersRef.current = updatedPeers;

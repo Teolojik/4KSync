@@ -152,7 +152,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#0a0e1a] text-white font-sans w-full relative">
+        <div className="flex flex-col h-[100dvh] bg-[#0a0e1a] text-white font-sans w-full relative overflow-hidden">
             {/* Atmospheric Background */}
             <div className="atmospheric-bg">
                 <div className="nebula-layer"></div>
@@ -179,7 +179,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     onSetAudioId={setSelectedAudioId}
                 />
 
-                <main className="flex-1 flex flex-col lg:flex-row p-4 lg:p-6 gap-6 min-h-0 overflow-hidden relative">
+                <main className="flex-1 flex flex-col lg:flex-row p-4 lg:p-6 gap-4 lg:gap-6 min-h-0 overflow-y-auto lg:overflow-hidden relative w-full max-w-[100vw]">
                     {/* Main Stage & Gallery Toggle animated with Framer Motion (Card Stack Feel) */}
                     <AnimatePresence mode="wait">
                         {focusedId ? ( // Changed from focusedItem to focusedId for more stable check
@@ -294,7 +294,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     </AnimatePresence>
 
                     {/* Sidebar container for Participants & Chat */}
-                    <div className="flex flex-col gap-4 w-full lg:w-96 min-h-0 h-[400px] lg:h-full overflow-hidden shrink-0">
+                    <div className="flex flex-col gap-4 w-full lg:w-96 min-h-0 shrink-0 pb-20 lg:pb-0">
 
                         {/* Mobile Tabs */}
                         {focusedId && (
