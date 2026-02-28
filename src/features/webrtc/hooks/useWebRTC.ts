@@ -337,98 +337,110 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
     const createPeerConnection = (peerId: string, isInitiator: boolean) => {
         if (peersRef.current[peerId]) return peersRef.current[peerId].connection;
 
-        const pc = new RTCPeerConnection(ICE_SERVERS);
+        console.log(`[4KSync] Creating peer connection for ${peerId}, initiator=${isInitiator}`);
 
-        const micTrack = localStreamRef.current?.getAudioTracks()[0];
-        const camTrack = localStreamRef.current?.getVideoTracks()[0];
-        const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0];
-        const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0];
+        try {
+            const pc = new RTCPeerConnection(ICE_SERVERS);
 
-        // B. Simulcast (Çoklu Kalite Katmanı) altyapısı - 3 farklı kalite yollar (sunucu uyumlu)
-        const videoEncodings = [
-            { rid: 'q', active: true, scaleResolutionDownBy: 4, maxBitrate: 500000 },
-            { rid: 'h', active: true, scaleResolutionDownBy: 2, maxBitrate: 1500000 },
-            { rid: 'f', active: true, maxBitrate: 8000000 }
-        ];
+            const micTrack = localStreamRef.current?.getAudioTracks()[0];
+            const camTrack = localStreamRef.current?.getVideoTracks()[0];
+            const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0];
+            const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0];
 
-        const micTc = pc.addTransceiver(micTrack || 'audio', { direction: 'sendrecv' });
-        const camTc = pc.addTransceiver(camTrack || 'video', {
-            direction: 'sendrecv',
-            sendEncodings: videoEncodings
-        });
-        const screenVideoTc = pc.addTransceiver(screenVideoTrack || 'video', {
-            direction: 'sendrecv',
-            sendEncodings: videoEncodings
-        });
-        const screenAudioTc = pc.addTransceiver(screenAudioTrack || 'audio', { direction: 'sendrecv' });
+            // Simple transceivers - no simulcast to avoid crashes with placeholder tracks
+            const micTc = pc.addTransceiver(micTrack || 'audio', { direction: 'sendrecv' });
+            const camTc = pc.addTransceiver(camTrack || 'video', { direction: 'sendrecv' });
+            const screenVideoTc = pc.addTransceiver(screenVideoTrack || 'video', { direction: 'sendrecv' });
+            const screenAudioTc = pc.addTransceiver(screenAudioTrack || 'audio', { direction: 'sendrecv' });
 
-        // C. VP9/AV1 Codec Önceliği (Daha düşük bitrate ile daha yüksek kalite)
-        const applyVP9Preference = (tc: RTCRtpTransceiver) => {
-            if (typeof RTCRtpReceiver !== 'undefined' && RTCRtpReceiver.getCapabilities && 'setCodecPreferences' in tc) {
-                const caps = RTCRtpReceiver.getCapabilities('video');
-                if (caps && caps.codecs) {
-                    const vp9 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/vp9');
-                    if (vp9.length > 0) {
-                        const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/vp9');
-                        try {
-                            // VP9'u listenin başına koyuyoruz
-                            tc.setCodecPreferences([...vp9, ...others]);
-                        } catch (e) {
-                            console.error('VP9 önceliklendirme başarısız:', e);
+            console.log(`[4KSync] Transceivers created for ${peerId}`);
+
+            // VP9 Codec Preference (best quality/bitrate ratio)
+            const applyVP9Preference = (tc: RTCRtpTransceiver) => {
+                try {
+                    if (typeof RTCRtpReceiver !== 'undefined' && RTCRtpReceiver.getCapabilities && 'setCodecPreferences' in tc) {
+                        const caps = RTCRtpReceiver.getCapabilities('video');
+                        if (caps && caps.codecs) {
+                            const vp9 = caps.codecs.filter(c => c.mimeType.toLowerCase() === 'video/vp9');
+                            if (vp9.length > 0) {
+                                const others = caps.codecs.filter(c => c.mimeType.toLowerCase() !== 'video/vp9');
+                                tc.setCodecPreferences([...vp9, ...others]);
+                            }
                         }
                     }
+                } catch (e) {
+                    console.warn('[4KSync] VP9 preference failed (OK):', e);
                 }
-            }
-        };
+            };
 
-        applyVP9Preference(camTc);
-        applyVP9Preference(screenVideoTc);
+            applyVP9Preference(camTc);
+            applyVP9Preference(screenVideoTc);
 
-        const remoteCamStream = new MediaStream();
-        const remoteScreenStream = new MediaStream();
+            const remoteCamStream = new MediaStream();
+            const remoteScreenStream = new MediaStream();
 
-        updatePeers(peerId, {
-            connection: pc,
-            stream: remoteCamStream,
-            screenStream: remoteScreenStream,
-            transceivers: { mic: micTc, cam: camTc, screenVideo: screenVideoTc, screenAudio: screenAudioTc }
-        });
+            updatePeers(peerId, {
+                connection: pc,
+                stream: remoteCamStream,
+                screenStream: remoteScreenStream,
+                transceivers: { mic: micTc, cam: camTc, screenVideo: screenVideoTc, screenAudio: screenAudioTc }
+            });
 
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                broadcastSignal(peerId, 'ice-candidate', event.candidate);
-            }
-        };
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    broadcastSignal(peerId, 'ice-candidate', event.candidate);
+                }
+            };
 
-        pc.ontrack = (event) => {
-            if (event.transceiver === micTc || event.transceiver === camTc) {
-                remoteCamStream.addTrack(event.track);
-            } else if (event.transceiver === screenVideoTc || event.transceiver === screenAudioTc) {
-                remoteScreenStream.addTrack(event.track);
-            }
-            updatePeers(peerId, {});
-        };
+            pc.ontrack = (event) => {
+                console.log(`[4KSync] Track received from ${peerId}: kind=${event.track.kind}`);
+                if (event.transceiver === micTc || event.transceiver === camTc) {
+                    remoteCamStream.addTrack(event.track);
+                } else if (event.transceiver === screenVideoTc || event.transceiver === screenAudioTc) {
+                    remoteScreenStream.addTrack(event.track);
+                } else {
+                    // Fallback: assign by track kind and order
+                    if (event.track.kind === 'video' && remoteCamStream.getVideoTracks().length === 0) {
+                        remoteCamStream.addTrack(event.track);
+                    } else if (event.track.kind === 'audio' && remoteCamStream.getAudioTracks().length === 0) {
+                        remoteCamStream.addTrack(event.track);
+                    } else {
+                        remoteScreenStream.addTrack(event.track);
+                    }
+                }
+                updatePeers(peerId, {});
+            };
 
-        pc.oniceconnectionstatechange = () => {
-            console.log(`[4KSync] ICE state for ${peerId}: ${pc.iceConnectionState}`);
-            if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
-                removePeer(peerId);
-            }
-            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
-                console.log(`[4KSync] ✅ Peer ${peerId} bağlantısı başarılı!`);
-            }
-        };
+            pc.oniceconnectionstatechange = () => {
+                console.log(`[4KSync] ICE state for ${peerId}: ${pc.iceConnectionState}`);
+                if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
+                    removePeer(peerId);
+                }
+                if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                    console.log(`[4KSync] ✅ Peer ${peerId} bağlantısı başarılı!`);
+                }
+            };
 
-        pc.onnegotiationneeded = async () => {
-            if (isInitiator) {
-                const offer = await pc.createOffer();
-                offer.sdp = mungeSDP(offer.sdp || '');
-                await pc.setLocalDescription(offer);
-                broadcastSignal(peerId, 'offer', pc.localDescription);
-            }
-        };
+            pc.onnegotiationneeded = async () => {
+                console.log(`[4KSync] Negotiation needed for ${peerId}, initiator=${isInitiator}`);
+                if (isInitiator) {
+                    try {
+                        const offer = await pc.createOffer();
+                        offer.sdp = mungeSDP(offer.sdp || '');
+                        await pc.setLocalDescription(offer);
+                        console.log(`[4KSync] Offer created and sent to ${peerId}`);
+                        broadcastSignal(peerId, 'offer', pc.localDescription);
+                    } catch (e) {
+                        console.error(`[4KSync] Offer creation failed for ${peerId}:`, e);
+                    }
+                }
+            };
 
-        return pc;
+            return pc;
+        } catch (e) {
+            console.error(`[4KSync] ❌ createPeerConnection FAILED for ${peerId}:`, e);
+            return new RTCPeerConnection(ICE_SERVERS); // Return empty PC to avoid null errors
+        }
     };
 
     const syncVideoConstraints = async (sender: RTCRtpSender, maxBitrate?: number) => {
