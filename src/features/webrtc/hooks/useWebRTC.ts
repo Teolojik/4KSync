@@ -9,12 +9,6 @@ const ICE_SERVERS = {
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
         { urls: 'stun:stun4.l.google.com:19302' },
-        // Free TURN servers for NAT traversal (mobile/different networks)
-        {
-            urls: 'turn:relay1.expressturn.com:443',
-            username: 'efHNUGLZP8TQJAAUMU',
-            credential: 'FWbAWF3MWXEKJv2e'
-        },
     ],
 };
 
@@ -397,8 +391,12 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
         };
 
         pc.oniceconnectionstatechange = () => {
+            console.log(`[4KSync] ICE state for ${peerId}: ${pc.iceConnectionState}`);
             if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
                 removePeer(peerId);
+            }
+            if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+                console.log(`[4KSync] ✅ Peer ${peerId} bağlantısı başarılı!`);
             }
         };
 
@@ -566,36 +564,46 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 }
             })
             .subscribe(async (status: any) => {
+                console.log(`[4KSync] Channel status: ${status}`);
                 if (status === 'SUBSCRIBED') {
                     await channel.track({ userId, nickname, onlineAt: new Date().toISOString() });
+                    console.log('[4KSync] Presence tracked successfully');
 
-                    // Initial Room State Fetch
-                    const { data: roomData } = await supabase
-                        .from('rooms')
-                        .select('*')
-                        .eq('id', roomId)
-                        .single();
+                    // Initial Room State Fetch (non-blocking, errors are OK)
+                    try {
+                        const { data: roomData } = await supabase
+                            .from('rooms')
+                            .select('*')
+                            .eq('id', roomId)
+                            .maybeSingle();
 
-                    if (roomData) {
-                        setIsLocked(roomData.is_locked);
+                        if (roomData) {
+                            setIsLocked(roomData.is_locked);
+                        }
+                    } catch (e) {
+                        console.warn('[4KSync] Room fetch failed (OK):', e);
                     }
 
-                    // Initial Message History Fetch
-                    const { data: history } = await supabase
-                        .from('messages')
-                        .select('*')
-                        .eq('room_id', roomId)
-                        .order('created_at', { ascending: true })
-                        .limit(50);
+                    // Initial Message History Fetch (non-blocking)
+                    try {
+                        const { data: history } = await supabase
+                            .from('messages')
+                            .select('*')
+                            .eq('room_id', roomId)
+                            .order('created_at', { ascending: true })
+                            .limit(50);
 
-                    if (history) {
-                        setMessages(history.map(m => ({
-                            id: m.id,
-                            senderId: m.sender_id,
-                            senderNickname: m.nickname,
-                            text: m.content,
-                            timestamp: new Date(m.created_at)
-                        })));
+                        if (history && history.length > 0) {
+                            setMessages(history.map(m => ({
+                                id: m.id,
+                                senderId: m.sender_id,
+                                senderNickname: m.nickname,
+                                text: m.content,
+                                timestamp: new Date(m.created_at)
+                            })));
+                        }
+                    } catch (e) {
+                        console.warn('[4KSync] Message history fetch failed (OK):', e);
                     }
                 }
             });
