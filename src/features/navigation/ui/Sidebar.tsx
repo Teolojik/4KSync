@@ -122,7 +122,7 @@ export function Sidebar() {
             )}
 
             <div className={`
-                flex h-screen flex-shrink-0 relative z-50 transition-transform duration-300
+                flex h-screen flex-shrink-0 z-50 transition-transform duration-300
                 fixed lg:relative
                 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
             `}>
