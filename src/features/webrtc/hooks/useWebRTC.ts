@@ -6,6 +6,15 @@ const ICE_SERVERS = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        // Free TURN servers for NAT traversal (mobile/different networks)
+        {
+            urls: 'turn:relay1.expressturn.com:443',
+            username: 'efHNUGLZP8TQJAAUMU',
+            credential: 'FWbAWF3MWXEKJv2e'
+        },
     ],
 };
 
@@ -283,26 +292,33 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
     };
 
     const sendChatMessage = async (text: string) => {
-        // We write to DB, and listen via postgres_changes for UI update
-        const { error } = await supabase.from('messages').insert({
+        const msg: ChatMessage = {
+            id: self.crypto.randomUUID(),
+            senderId: userId,
+            senderNickname: nickname,
+            text,
+            timestamp: new Date()
+        };
+
+        // Instant: show locally + broadcast to all peers
+        setMessages(prev => [...prev, msg]);
+        if (channelRef.current) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'chat',
+                payload: msg
+            });
+        }
+
+        // Persistent: also save to database (fire and forget)
+        supabase.from('messages').insert({
             room_id: roomId,
             sender_id: userId,
             nickname: nickname,
             content: text
+        }).then(({ error }) => {
+            if (error) console.warn('Mesaj DB kayıt hatası (önemsiz):', error.message);
         });
-
-        if (error) {
-            console.error('Mesaj kaydedilemedi:', error);
-            // Fallback: update UI locally if DB fail
-            const msg: ChatMessage = {
-                id: self.crypto.randomUUID(),
-                senderId: userId,
-                senderNickname: nickname,
-                text,
-                timestamp: new Date()
-            };
-            setMessages(prev => [...prev, msg]);
-        }
     };
 
     const createPeerConnection = (peerId: string, isInitiator: boolean) => {
@@ -479,36 +495,15 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 const count = Object.keys(channel.presenceState()).length;
                 setParticipantCount(count >= 1 ? count : 1);
             })
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages',
-                filter: `room_id=eq.${roomId}`
-            }, (payload) => {
-                const newMsg = payload.new;
-                // Avoid double adding if somehow broadcast was also used
-                setMessages(prev => {
-                    if (prev.some(m => m.id === newMsg.id)) return prev;
-                    return [...prev, {
-                        id: newMsg.id,
-                        senderId: newMsg.sender_id,
-                        senderNickname: newMsg.nickname,
-                        text: newMsg.content,
-                        timestamp: new Date(newMsg.created_at)
-                    }];
-                });
-            })
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'rooms',
-                filter: `id=eq.${roomId}`
-            }, (payload) => {
-                if (payload.new && payload.new.is_locked !== undefined) {
-                    setIsLocked(payload.new.is_locked);
+            .on('broadcast', { event: 'chat' }, ({ payload }: { payload: any }) => {
+                const msg = payload as ChatMessage;
+                if (msg.senderId !== userId) {
+                    setMessages(prev => {
+                        if (prev.some(m => m.id === msg.id)) return prev;
+                        return [...prev, msg];
+                    });
                 }
             })
-            // Deleted broadcast/chat listener as we use postgres_changes now
             .on('broadcast', { event: 'signal' }, async ({ payload }: { payload: any }) => {
                 const { senderId, targetId, type, data } = payload;
 
