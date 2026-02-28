@@ -400,7 +400,7 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
             };
 
             pc.ontrack = (event) => {
-                console.log(`[4KSync] Track received from ${peerId}: kind=${event.track.kind}, mid=${event.transceiver.mid}`);
+                console.log(`[4KSync] Track received from ${peerId}: kind=${event.track.kind}, mid=${event.transceiver.mid}, muted=${event.track.muted}`);
                 const mid = parseInt(event.transceiver.mid || '0');
                 // First 2 transceivers (mid 0,1) = camera stream, rest = screen stream
                 if (mid <= 1) {
@@ -408,11 +408,21 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 } else {
                     remoteScreenStream.addTrack(event.track);
                 }
+
+                // Listen for track mute/unmute changes to show/hide tiles
+                const triggerUpdate = () => {
+                    clearTimeout((pc as any)._trackUpdateTimer);
+                    (pc as any)._trackUpdateTimer = setTimeout(() => {
+                        updatePeers(peerId, {});
+                    }, 100);
+                };
+
+                event.track.onunmute = triggerUpdate;
+                event.track.onmute = triggerUpdate;
+                event.track.onended = triggerUpdate;
+
                 // Debounced re-render to avoid infinite loop
-                clearTimeout((pc as any)._trackUpdateTimer);
-                (pc as any)._trackUpdateTimer = setTimeout(() => {
-                    updatePeers(peerId, {});
-                }, 100);
+                triggerUpdate();
             };
 
             pc.oniceconnectionstatechange = () => {
