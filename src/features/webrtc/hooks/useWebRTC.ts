@@ -506,10 +506,11 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 for (const key in state) {
                     const presence = state[key][0] as any;
                     if (presence && presence.userId && presence.userId !== userId) {
-                        if (!peersRef.current[presence.userId]) {
-                            console.log(`[4KSync] Sync: creating PC for existing user ${presence.userId} (${presence.nickname})`);
+                        if (!peersRef.current[presence.userId]?.connection) {
+                            const shouldInitiate = userId > presence.userId;
+                            console.log(`[4KSync] Sync: creating PC for existing user ${presence.userId} (${presence.nickname}), shouldInitiate=${shouldInitiate}`);
                             updatePeers(presence.userId, { nickname: presence.nickname || 'Guest' });
-                            createPeerConnection(presence.userId, true);
+                            createPeerConnection(presence.userId, shouldInitiate);
                         }
                     }
                 }
@@ -524,9 +525,11 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                             return;
                         }
 
-                        if (!peersRef.current[presence.userId]) {
+                        if (!peersRef.current[presence.userId]?.connection) {
+                            const shouldInitiate = userId > presence.userId;
+                            console.log(`[4KSync] Join: creating PC, shouldInitiate=${shouldInitiate}`);
                             updatePeers(presence.userId, { nickname: presence.nickname || 'Guest' });
-                            createPeerConnection(presence.userId, true);
+                            createPeerConnection(presence.userId, shouldInitiate);
                         }
                     }
                 });
@@ -583,32 +586,44 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
 
                 let pc = peersRef.current[senderId]?.connection;
                 if (!pc) {
-                    pc = createPeerConnection(senderId, false);
+                    const shouldInitiate = userId > senderId;
+                    pc = createPeerConnection(senderId, shouldInitiate);
                 }
 
-                if (type === 'offer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data));
-                    const answer = await pc.createAnswer();
-                    answer.sdp = mungeSDP(answer.sdp || '');
-                    await pc.setLocalDescription(answer);
-                    broadcastSignal(senderId, 'answer', pc.localDescription);
+                const isPolite = userId < senderId; // Lower ID is polite
 
-                    const screenVideoSender = peersRef.current[senderId]?.transceivers?.screenVideo.sender;
-                    if (screenVideoSender) {
-                        syncVideoConstraints(screenVideoSender);
+                try {
+                    if (type === 'offer') {
+                        // Handle glare: if we also sent an offer
+                        if (pc.signalingState === 'have-local-offer') {
+                            if (isPolite) {
+                                console.log('[4KSync] Glare detected, rolling back (polite)');
+                                await pc.setLocalDescription({ type: 'rollback' });
+                            } else {
+                                console.log('[4KSync] Glare detected, ignoring remote offer (impolite)');
+                                return;
+                            }
+                        }
+                        await pc.setRemoteDescription(new RTCSessionDescription(data));
+                        const answer = await pc.createAnswer();
+                        answer.sdp = mungeSDP(answer.sdp || '');
+                        await pc.setLocalDescription(answer);
+                        broadcastSignal(senderId, 'answer', pc.localDescription);
+                    } else if (type === 'answer') {
+                        if (pc.signalingState === 'have-local-offer') {
+                            await pc.setRemoteDescription(new RTCSessionDescription(data));
+                        } else {
+                            console.warn('[4KSync] Ignoring answer - not in have-local-offer state:', pc.signalingState);
+                        }
+                    } else if (type === 'ice-candidate') {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate(data));
+                        } catch (e) {
+                            console.warn('[4KSync] ICE candidate error (OK if before offer):', (e as Error).message);
+                        }
                     }
-                } else if (type === 'answer') {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data));
-                    const screenVideoSender = peersRef.current[senderId]?.transceivers?.screenVideo.sender;
-                    if (screenVideoSender) {
-                        syncVideoConstraints(screenVideoSender);
-                    }
-                } else if (type === 'ice-candidate') {
-                    try {
-                        await pc.addIceCandidate(new RTCIceCandidate(data));
-                    } catch (e) {
-                        console.error('Error adding received ice candidate', e);
-                    }
+                } catch (e) {
+                    console.error(`[4KSync] Signal handling error for ${type}:`, e);
                 }
             })
             .subscribe(async (status: any) => {
