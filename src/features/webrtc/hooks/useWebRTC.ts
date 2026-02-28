@@ -290,6 +290,7 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
 
     const broadcastSignal = (targetId: string | null, type: string, payload: any) => {
         if (channelRef.current) {
+            console.log(`[4KSync] Sending signal: type=${type}, to=${targetId || 'all'}`);
             channelRef.current.send({
                 type: 'broadcast',
                 event: 'signal',
@@ -464,6 +465,8 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
         channel
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
+                console.log('[4KSync] Sync event fired. Presence state:', JSON.stringify(state, null, 2));
+                console.log('[4KSync] My userId:', userId);
                 let masterAdminId = null;
 
                 // Priority 1: Check if 'Teolojik' is present
@@ -500,7 +503,9 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 }
             })
             .on('presence', { event: 'join' }, ({ newPresences }: { newPresences: any[] }) => {
+                console.log('[4KSync] Join event fired:', JSON.stringify(newPresences));
                 newPresences.forEach((presence: any) => {
+                    console.log(`[4KSync] Join: userId=${presence.userId}, myId=${userId}, match=${presence.userId !== userId}`);
                     if (presence.userId !== userId) {
                         if (isAdmin && isLocked) {
                             kickUser(presence.userId);
@@ -534,6 +539,7 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
             })
             .on('broadcast', { event: 'signal' }, async ({ payload }: { payload: any }) => {
                 const { senderId, targetId, type, data } = payload;
+                console.log(`[4KSync] Received signal: type=${type}, from=${senderId}, to=${targetId || 'all'}`);
 
                 if (senderId === userId) return;
 
