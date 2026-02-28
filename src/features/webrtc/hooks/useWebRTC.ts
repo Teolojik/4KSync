@@ -486,6 +486,18 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 setAdminId(masterAdminId);
                 const count = Object.keys(state).length;
                 setParticipantCount(count >= 1 ? count : 1);
+
+                // Create peer connections for users already in the room
+                for (const key in state) {
+                    const presence = state[key][0] as any;
+                    if (presence && presence.userId && presence.userId !== userId) {
+                        if (!peersRef.current[presence.userId]) {
+                            console.log(`[4KSync] Sync: creating PC for existing user ${presence.userId} (${presence.nickname})`);
+                            updatePeers(presence.userId, { nickname: presence.nickname || 'Guest' });
+                            createPeerConnection(presence.userId, true);
+                        }
+                    }
+                }
             })
             .on('presence', { event: 'join' }, ({ newPresences }: { newPresences: any[] }) => {
                 newPresences.forEach((presence: any) => {
