@@ -190,9 +190,23 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
         broadcastSignal(targetId, 'admin-action', { action: 'ban' });
     };
 
-    const toggleRoomLock = (locked: boolean) => {
+    const toggleRoomLock = async (locked: boolean) => {
         if (!isAdmin) return;
         setIsLocked(locked);
+        // Persist to DB
+        const { error } = await supabase
+            .from('rooms')
+            .update({ is_locked: locked })
+            .eq('id', roomId);
+
+        if (error) {
+            // If room doesn't exist, insert it
+            await supabase.from('rooms').insert({
+                id: roomId,
+                is_locked: locked,
+                admin_id: userId
+            });
+        }
         broadcastSignal(null, 'admin-action', { action: 'lock', locked });
     };
 
@@ -263,23 +277,26 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
         }
     };
 
-    const sendChatMessage = (text: string) => {
-        const msg: ChatMessage = {
-            id: self.crypto.randomUUID(),
-            senderId: userId,
-            senderNickname: nickname,
-            text,
-            timestamp: new Date()
-        };
+    const sendChatMessage = async (text: string) => {
+        // We write to DB, and listen via postgres_changes for UI update
+        const { error } = await supabase.from('messages').insert({
+            room_id: roomId,
+            sender_id: userId,
+            nickname: nickname,
+            content: text
+        });
 
-        setMessages(prev => [...prev, msg]);
-
-        if (channelRef.current) {
-            channelRef.current.send({
-                type: 'broadcast',
-                event: 'chat',
-                payload: msg
-            });
+        if (error) {
+            console.error('Mesaj kaydedilemedi:', error);
+            // Fallback: update UI locally if DB fail
+            const msg: ChatMessage = {
+                id: self.crypto.randomUUID(),
+                senderId: userId,
+                senderNickname: nickname,
+                text,
+                timestamp: new Date()
+            };
+            setMessages(prev => [...prev, msg]);
         }
     };
 
@@ -457,12 +474,36 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                 const count = Object.keys(channel.presenceState()).length;
                 setParticipantCount(count >= 1 ? count : 1);
             })
-            .on('broadcast', { event: 'chat' }, ({ payload }: { payload: any }) => {
-                const msg = payload as ChatMessage;
-                if (msg.senderId !== userId) {
-                    setMessages(prev => [...prev, msg]);
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'messages',
+                filter: `room_id=eq.${roomId}`
+            }, (payload) => {
+                const newMsg = payload.new;
+                // Avoid double adding if somehow broadcast was also used
+                setMessages(prev => {
+                    if (prev.some(m => m.id === newMsg.id)) return prev;
+                    return [...prev, {
+                        id: newMsg.id,
+                        senderId: newMsg.sender_id,
+                        senderNickname: newMsg.nickname,
+                        text: newMsg.content,
+                        timestamp: new Date(newMsg.created_at)
+                    }];
+                });
+            })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'rooms',
+                filter: `id=eq.${roomId}`
+            }, (payload) => {
+                if (payload.new && payload.new.is_locked !== undefined) {
+                    setIsLocked(payload.new.is_locked);
                 }
             })
+            // Deleted broadcast/chat listener as we use postgres_changes now
             .on('broadcast', { event: 'signal' }, async ({ payload }: { payload: any }) => {
                 const { senderId, targetId, type, data } = payload;
 
@@ -527,6 +568,35 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
             .subscribe(async (status: any) => {
                 if (status === 'SUBSCRIBED') {
                     await channel.track({ userId, nickname, onlineAt: new Date().toISOString() });
+
+                    // Initial Room State Fetch
+                    const { data: roomData } = await supabase
+                        .from('rooms')
+                        .select('*')
+                        .eq('id', roomId)
+                        .single();
+
+                    if (roomData) {
+                        setIsLocked(roomData.is_locked);
+                    }
+
+                    // Initial Message History Fetch
+                    const { data: history } = await supabase
+                        .from('messages')
+                        .select('*')
+                        .eq('room_id', roomId)
+                        .order('created_at', { ascending: true })
+                        .limit(50);
+
+                    if (history) {
+                        setMessages(history.map(m => ({
+                            id: m.id,
+                            senderId: m.sender_id,
+                            senderNickname: m.nickname,
+                            text: m.content,
+                            timestamp: new Date(m.created_at)
+                        })));
+                    }
                 }
             });
 
