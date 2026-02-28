@@ -37,10 +37,10 @@ export function ControlBar({ roomId, onStartWebcam, onStartScreenShare, isReconn
     };
 
     return (
-        <div className="w-full flex items-center justify-between pt-4 pb-2 px-4 md:px-6 z-50 shrink-0">
+        <div className="w-full flex items-center justify-center lg:justify-between pt-4 pb-2 px-4 md:px-6 z-50 shrink-0 relative">
 
             {/* Left Side: Room Status & Network */}
-            <div className="flex items-center gap-4 bg-black/40 backdrop-blur-2xl border border-white/5 rounded-2xl px-4 py-2.5 shadow-lg">
+            <div className="hidden lg:flex items-center gap-4 bg-black/40 backdrop-blur-2xl border border-white/5 rounded-2xl px-4 py-2.5 shadow-lg">
                 <div className="flex items-center gap-2 pr-4 border-r border-white/5">
                     <div className="relative flex items-center justify-center w-3 h-3">
                         <div className={`absolute w-full h-full rounded-full ${isReconnecting ? 'bg-amber-500' : 'bg-[#A855F7]'} animate-ping opacity-75`}></div>
@@ -80,7 +80,7 @@ export function ControlBar({ roomId, onStartWebcam, onStartScreenShare, isReconn
             )}
 
             {/* Center: Floating Toolbelt */}
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#111111]/80 backdrop-blur-[32px] border border-white/10 rounded-[32px] px-3 sm:px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)] absolute left-1/2 -translate-x-1/2">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#111111]/80 backdrop-blur-[32px] border border-white/10 rounded-[32px] px-3 sm:px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.05)] lg:absolute lg:left-1/2 lg:-translate-x-1/2">
                 {!hasLocalStream ? (
                     <div className="flex items-center gap-2">
                         <div className="relative">
