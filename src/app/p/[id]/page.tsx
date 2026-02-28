@@ -179,7 +179,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     onSetAudioId={setSelectedAudioId}
                 />
 
-                <main className="flex-1 flex flex-col lg:flex-row p-4 lg:p-6 gap-4 lg:gap-6 min-h-0 overflow-y-auto lg:overflow-hidden relative w-full max-w-[100vw]">
+                <main className="flex-1 flex flex-col lg:flex-row p-2 sm:p-4 lg:p-6 gap-3 sm:gap-4 lg:gap-6 min-h-0 overflow-y-auto lg:overflow-hidden relative w-full max-w-[100vw]">
                     {/* Main Stage & Gallery Toggle animated with Framer Motion (Card Stack Feel) */}
                     <AnimatePresence mode="wait">
                         {focusedId ? ( // Changed from focusedItem to focusedId for more stable check
@@ -190,7 +190,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                                 exit={{ y: 340, scale: 0.95, opacity: 0 }}
                                 transition={{ type: "spring", duration: 0.8, bounce: 0 }}
                                 ref={mainStageRef as any}
-                                className="flex-1 glass-bento flex items-center justify-center overflow-hidden relative group origin-bottom shadow-2xl z-10 bg-black"
+                                className="flex-1 glass-bento flex items-center justify-center overflow-hidden relative group origin-bottom shadow-2xl z-10 bg-black min-h-[40vh] sm:min-h-[50vh] lg:min-h-0"
                             >
                                 <video
                                     ref={(el) => {
@@ -245,26 +245,27 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                                     <div className={`w-2 h-2 rounded-full ${focusedItem?.isLocal ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
                                     <span>{focusedItem?.nickname}</span>
                                 </div>
-                                <div className="absolute top-6 right-6 flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={togglePiP}
-                                        className="bg-black/60 hover:bg-zinc-800 p-2.5 rounded-xl text-zinc-300 text-sm font-medium backdrop-blur-md transition-all shadow-xl border border-zinc-700/80"
-                                        title="Resim içinde Resim (PiP)"
-                                    >
-                                        <ExternalLink size={18} />
-                                    </button>
+                                <div className="absolute top-4 right-4 lg:top-6 lg:right-6 flex items-center gap-2 lg:gap-3 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity z-20">
                                     <button
                                         onClick={toggleFullscreen}
-                                        className="bg-black/60 hover:bg-zinc-800 p-2.5 rounded-xl text-zinc-300 text-sm font-medium backdrop-blur-md transition-all shadow-xl border border-zinc-700/80"
+                                        className="bg-black/70 hover:bg-zinc-800 p-2.5 lg:p-2.5 rounded-xl text-white lg:text-zinc-300 text-sm font-medium backdrop-blur-md transition-all shadow-xl border border-white/10 lg:border-zinc-700/80"
                                         title="Tam Ekran"
                                     >
                                         <Maximize size={18} />
                                     </button>
                                     <button
-                                        onClick={() => handleFocus(null)}
-                                        className="bg-black/60 hover:bg-zinc-800 px-4 py-2 rounded-xl text-zinc-300 text-sm font-medium backdrop-blur-md transition-all shadow-xl border border-zinc-700/80"
+                                        onClick={togglePiP}
+                                        className="bg-black/70 hover:bg-zinc-800 p-2.5 rounded-xl text-white lg:text-zinc-300 text-sm font-medium backdrop-blur-md transition-all shadow-xl border border-white/10 lg:border-zinc-700/80 hidden sm:block"
+                                        title="Resim içinde Resim (PiP)"
                                     >
-                                        Küçült (Galeriye Dön)
+                                        <ExternalLink size={18} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleFocus(null)}
+                                        className="bg-black/70 hover:bg-zinc-800 px-3 py-2 lg:px-4 rounded-xl text-white lg:text-zinc-300 text-xs lg:text-sm font-medium backdrop-blur-md transition-all shadow-xl border border-white/10 lg:border-zinc-700/80"
+                                    >
+                                        <span className="lg:hidden">Küçült</span>
+                                        <span className="hidden lg:inline">Küçült (Galeriye Dön)</span>
                                     </button>
                                 </div>
                             </motion.div>
@@ -294,7 +295,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                     </AnimatePresence>
 
                     {/* Sidebar container for Participants & Chat */}
-                    <div className="flex flex-col gap-4 w-full lg:w-96 min-h-0 shrink-0 pb-20 lg:pb-0">
+                    <div className="flex flex-col gap-3 sm:gap-4 w-full lg:w-96 min-h-0 shrink-0 pb-24 lg:pb-0">
 
                         {/* Mobile Tabs */}
                         {focusedId && (
@@ -315,7 +316,7 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
                         )}
 
                         {focusedId && (
-                            <div className={`flex-1 glass-bento overflow-hidden min-h-[200px] lg:min-h-[50%] relative p-2 ${mobileTab === 'participants' ? 'flex' : 'hidden lg:flex'}`}>
+                            <div className={`glass-bento overflow-hidden min-h-[180px] sm:min-h-[200px] lg:min-h-[50%] lg:flex-1 relative p-2 ${mobileTab === 'participants' ? 'flex' : 'hidden lg:flex'}`}>
                                 <ParticipantGrid items={allStreams.filter(s => {
                                     if (s.id === focusedId) return false;
                                     if (focusedItem?.type === 'screen' && s.id === `${focusedId.replace('-screen', '')}-cam`) return false;

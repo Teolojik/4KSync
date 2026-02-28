@@ -34,7 +34,7 @@ export function ParticipantGrid({ items, layout = 'sidebar', isAdmin = false, ad
                 <span className="bg-[#18181b] border border-white/5 text-white/40 text-[10px] sm:text-xs px-3 py-1 rounded-full font-bold">{totalParticipants} KATILDI</span>
             </div>
 
-            <div className={`grid gap-3 sm:gap-4 ${isGallery ? 'grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-fr h-full p-4 pt-16 content-start justify-items-center' : 'grid-cols-2 lg:grid-cols-1'}`}>
+            <div className={`grid gap-2 sm:gap-3 lg:gap-4 ${isGallery ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-fr h-full p-2 sm:p-4 pt-14 sm:pt-16 content-start justify-items-center' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-1'}`}>
                 {items.map(item => (
                     <PeerVideo key={item.id} item={item} isGallery={isGallery} onFocus={onFocus} isAdmin={isAdmin} adminId={adminId} onKick={onKick} onBan={onBan} onRemoteMute={onRemoteMute} onRemoteVideoOff={onRemoteVideoOff} />
                 ))}
@@ -94,7 +94,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
 
     const isCam = item.type === 'cam';
     // In Gallery mode, we enforce a consistent aspect ratio (16:9) for all items
-    const containerClasses = `aspect-video rounded-[32px] overflow-hidden border-2 shadow-xl relative group transition-all duration-300 flex items-center justify-center bg-[#111111] w-full ${item.isLocal ? 'border-[#A855F7] shadow-[0_0_40px_rgba(168,85,247,0.25)]' : 'border-white/5 hover:border-white/20'}`;
+    const containerClasses = `aspect-video rounded-2xl sm:rounded-[32px] overflow-hidden border-2 shadow-xl relative group transition-all duration-300 flex items-center justify-center bg-[#111111] w-full ${item.isLocal ? 'border-[#A855F7] shadow-[0_0_40px_rgba(168,85,247,0.25)]' : 'border-white/5 hover:border-white/20'}`;
 
     const realUserId = item.id.replace('-cam', '').replace('-screen', '');
     const isOwnerAdmin = adminId === realUserId;
@@ -118,7 +118,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                 </div>
             )}
 
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center gap-2 cursor-pointer z-10">
                 {onFocus && (
                     <button
                         onClick={() => onFocus(item.id)}
@@ -167,7 +167,7 @@ function PeerVideo({ item, isGallery, onFocus, isAdmin, adminId, onKick, onBan, 
                 )}
             </div>
 
-            <div className={`absolute ${isCam ? 'bottom-4' : 'bottom-4 left-4'} bg-[#0a0a0a]/60 px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide backdrop-blur-xl shadow-lg flex items-center gap-2 z-10 border border-white/10`}>
+            <div className={`absolute ${isCam ? 'bottom-2 sm:bottom-4' : 'bottom-2 left-2 sm:bottom-4 sm:left-4'} bg-[#0a0a0a]/60 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[11px] font-semibold tracking-wide backdrop-blur-xl shadow-lg flex items-center gap-1.5 sm:gap-2 z-10 border border-white/10`}>
                 <div className={`w-2 h-2 rounded-full ${item.isLocal ? 'bg-[#A855F7] shadow-[0_0_10px_rgba(168,85,247,0.8)]' : 'bg-blue-500'}`}></div>
                 <span className="truncate max-w-[100px] text-white/90">{item.nickname}</span>
                 {isOwnerAdmin && <Crown size={12} className="text-amber-400 fill-amber-400/20" />}

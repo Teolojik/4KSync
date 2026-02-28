@@ -609,29 +609,28 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                             }
                         }
                         await pc.setRemoteDescription(new RTCSessionDescription(data));
-                        const answer = await pc.createAnswer();
-                        answer.sdp = mungeSDP(answer.sdp || '');
-                        await pc.setLocalDescription(answer);
-                        broadcastSignal(senderId, 'answer', pc.localDescription);
 
-                        // Answerer: attach local tracks to the offer-created transceivers
+                        // Answerer: attach local tracks BEFORE creating answer
+                        // This ensures answer SDP has 'sendrecv' direction, not 'recvonly'
                         const transceivers = pc.getTransceivers();
-                        console.log(`[4KSync] Answerer: ${transceivers.length} transceivers after answer`);
+                        console.log(`[4KSync] Answerer: ${transceivers.length} transceivers from offer`);
 
                         const micTrack = localStreamRef.current?.getAudioTracks()[0];
                         const camTrack = localStreamRef.current?.getVideoTracks()[0];
                         const screenVideoTrack = screenStreamRef.current?.getVideoTracks()[0];
                         const screenAudioTrack = screenStreamRef.current?.getAudioTracks()[0];
 
-                        // Replace sender tracks on the offer-created transceivers
+                        console.log(`[4KSync] Answerer: local tracks - mic=${!!micTrack}, cam=${!!camTrack}`);
+
                         for (const tc of transceivers) {
                             try {
+                                tc.direction = 'sendrecv'; // Force bidirectional
                                 if (tc.mid === '0' && micTrack) {
                                     await tc.sender.replaceTrack(micTrack);
-                                    console.log('[4KSync] Answerer: attached mic track');
+                                    console.log('[4KSync] Answerer: attached mic track to mid=0');
                                 } else if (tc.mid === '1' && camTrack) {
                                     await tc.sender.replaceTrack(camTrack);
-                                    console.log('[4KSync] Answerer: attached cam track');
+                                    console.log('[4KSync] Answerer: attached cam track to mid=1');
                                 } else if (tc.mid === '2' && screenVideoTrack) {
                                     await tc.sender.replaceTrack(screenVideoTrack);
                                 } else if (tc.mid === '3' && screenAudioTrack) {
@@ -653,6 +652,12 @@ export const useWebRTC = (roomId: string, userId: string, nickname: string = 'Gu
                                 }
                             });
                         }
+
+                        // NOW create answer with sendrecv directions
+                        const answer = await pc.createAnswer();
+                        answer.sdp = mungeSDP(answer.sdp || '');
+                        await pc.setLocalDescription(answer);
+                        broadcastSignal(senderId, 'answer', pc.localDescription);
                     } else if (type === 'answer') {
                         if (pc.signalingState === 'have-local-offer') {
                             await pc.setRemoteDescription(new RTCSessionDescription(data));
