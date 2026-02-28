@@ -1,0 +1,305 @@
+@import "tailwindcss";
+
+:root {
+  --background: #09090b;
+  /* Deep graphite backdrop */
+  --foreground: #ffffff;
+  --bento-bg: #18181b;
+  /* Solid matte dark card background */
+  --bento-border: rgba(255, 255, 255, 0.05);
+  /* Super subtle border */
+  --accent-purple: #A855F7;
+  --accent-glow: rgba(168, 85, 247, 0.4);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', 'Segoe UI', Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+/* ==============================
+   SOLID DARK BACKGROUND (No Nebula)
+   Clean, distraction-free matte surface
+   ============================== */
+.atmospheric-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--background);
+  /* Very subtle radial gradient just to avoid total flatness, but no colors */
+  background: radial-gradient(circle at top right, #121214 0%, var(--background) 100%);
+}
+
+.atmospheric-bg::before,
+.atmospheric-bg::after,
+.nebula-layer,
+.grain-overlay {
+  display: none;
+  /* Disable all glass/space elements */
+}
+
+@keyframes nebula1 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: translate(5%, 5%) scale(1.15);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-3%, 3%) scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes nebula2 {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: translate(-5%, -3%) scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(3%, -5%) scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes slideUp {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes nebula3 {
+
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: scale(1.2) rotate(5deg);
+    opacity: 1;
+  }
+}
+
+/* ==============================
+   SOLID BENTO BOX STYLE
+   Matte panels, crisp borders, subtle inset light
+   ============================== */
+.glass {
+  background: var(--bento-bg);
+  border: 1px solid var(--bento-border);
+}
+
+.glass-panel {
+  background: var(--bento-bg);
+  border: 1px solid var(--bento-border);
+}
+
+.glass-card {
+  background: var(--bento-bg);
+  border: 1px solid var(--bento-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.glass-card:hover {
+  background: #202024;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ==============================
+   BENTO BOX LAYER (Main Containers)
+   Solid, premium look
+   ============================== */
+.glass-bento {
+  background: var(--bento-bg);
+  border: 1px solid var(--bento-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    /* Extremely faint top light */
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  border-radius: 20px;
+}
+
+.glass-active {
+  background: #ffffff;
+  color: #111114 !important;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-active * {
+  color: #111114 !important;
+}
+
+.glass-input {
+  background: var(--background);
+  border: 1px solid var(--bento-border);
+  transition: all 0.3s ease;
+}
+
+.glass-input:focus {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+/* ==============================
+   BUTTONS — High Fidelity
+   ============================== */
+.btn-primary {
+  background: #ffffff;
+  color: #111114;
+  font-weight: 800;
+  border-radius: 16px;
+  padding: 10px 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  box-shadow: 0 10px 20px -10px rgba(255, 255, 255, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.75rem;
+}
+
+.btn-primary:hover {
+  background: #f4f4f5;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.4);
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #a1a1aa;
+  font-weight: 500;
+  border-radius: 9999px;
+  padding: 8px 24px;
+  border: 1px solid var(--bento-border);
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.btn-secondary:active {
+  transform: scale(0.97);
+}
+
+/* ==============================
+   PREMIUM SCROLLBAR — Ultra thin
+   ============================== */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ==============================
+   ANIMATIONS
+   ============================== */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.float {
+  animation: float 5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
