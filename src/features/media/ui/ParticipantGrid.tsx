@@ -26,21 +26,21 @@ export function ParticipantGrid({ items, layout = 'sidebar', isAdmin = false, ad
     const isGallery = layout === 'gallery';
 
     return (
-        <div className={`flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar ${isGallery ? 'w-full h-full' : 'w-full lg:w-80'}`}>
-            <div className={`flex items-center justify-between px-2 pt-2 ${isGallery ? 'absolute top-6 left-8 z-10' : ''}`}>
+        <div className={`flex flex-col gap-3 sm:gap-4 overflow-y-auto pr-2 custom-scrollbar ${isGallery ? 'w-full h-full' : 'w-full lg:w-80'}`}>
+            <div className={`flex items-center justify-between px-2 sm:px-4 pt-2 shrink-0 ${isGallery ? 'sm:absolute sm:top-6 sm:left-8 sm:z-10' : ''}`}>
                 <h2 className="text-[#A855F7] uppercase tracking-[0.2em] text-[10px] sm:text-xs font-black">
                     {isGallery ? 'GALERİ' : 'KATILIMCILAR'}
                 </h2>
                 <span className="bg-[#18181b] border border-white/5 text-white/40 text-[10px] sm:text-xs px-3 py-1 rounded-full font-bold">{totalParticipants} KATILDI</span>
             </div>
 
-            <div className={`grid gap-2 sm:gap-3 lg:gap-4 ${isGallery ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-fr h-full p-2 sm:p-4 pt-14 sm:pt-16 content-start justify-items-center' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-1'}`}>
+            <div className={`grid gap-3 sm:gap-4 ${isGallery ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 p-2 sm:p-4 sm:pt-14' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-1'}`}>
                 {items.map(item => (
                     <PeerVideo key={item.id} item={item} isGallery={isGallery} onFocus={onFocus} isAdmin={isAdmin} adminId={adminId} onKick={onKick} onBan={onBan} onRemoteMute={onRemoteMute} onRemoteVideoOff={onRemoteVideoOff} />
                 ))}
 
                 {totalParticipants <= 1 && (
-                    <div className="bg-[#18181b] border border-white/5 rounded-[32px] p-10 text-center text-white/20 text-sm w-full col-span-full flex flex-col items-center gap-4 group">
+                    <div className="bg-[#18181b] border border-white/5 rounded-2xl sm:rounded-[32px] p-8 sm:p-10 text-center text-white/20 text-sm w-full col-span-full flex flex-col items-center gap-4 group">
                         <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center border border-white/5 group-hover:bg-[#A855F7]/10 group-hover:border-[#A855F7]/20 transition-all duration-500">
                             <UserMinus size={24} className="opacity-40 group-hover:text-[#A855F7] group-hover:opacity-100 transition-all duration-500" />
                         </div>

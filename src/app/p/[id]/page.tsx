@@ -141,13 +141,52 @@ export default function ChannelPage({ params }: { params: Promise<{ id: string }
     };
 
     const toggleFullscreen = () => {
-        if (!mainStageRef.current) return;
-        if (!document.fullscreenElement) {
-            mainStageRef.current.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable full-screen mode: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
+        const el = mainStageRef.current as any;
+        const videoEl = mainVideoRef.current as any;
+
+        // Check if already fullscreen
+        const isCurrentlyFullscreen = document.fullscreenElement ||
+            (document as any).webkitFullscreenElement ||
+            (document as any).msFullscreenElement;
+
+        if (isCurrentlyFullscreen) {
+            // Exit fullscreen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if ((document as any).webkitExitFullscreen) {
+                (document as any).webkitExitFullscreen();
+            } else if ((document as any).msExitFullscreen) {
+                (document as any).msExitFullscreen();
+            }
+            return;
+        }
+
+        // Try container fullscreen first (works on desktop + Android Chrome)
+        if (el) {
+            if (el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {
+                    // Fallback: try video element fullscreen (iOS Safari)
+                    if (videoEl?.webkitEnterFullscreen) {
+                        videoEl.webkitEnterFullscreen();
+                    }
+                });
+                return;
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
+                return;
+            } else if (el.msRequestFullscreen) {
+                el.msRequestFullscreen();
+                return;
+            }
+        }
+
+        // Final fallback: video element fullscreen (iOS Safari)
+        if (videoEl) {
+            if (videoEl.webkitEnterFullscreen) {
+                videoEl.webkitEnterFullscreen();
+            } else if (videoEl.requestFullscreen) {
+                videoEl.requestFullscreen();
+            }
         }
     };
 
